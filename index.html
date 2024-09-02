@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat & Case Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .card {
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .card h2 {
+            margin: 0 0 10px;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 8px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        #chatWindow {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 16px;
+            height: 300px;
+            overflow-y: scroll;
+            margin-bottom: 20px;
+            background-color: white;
+        }
+        #messageInput {
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Case Viewer</h1>
+    <div id="cardsContainer"></div>
+
+    <h1>Chat Room</h1>
+    <div id="usernameSection">
+        <input type="text" id="usernameInput" placeholder="Enter your username">
+        <button id="setUsernameButton">Set Username</button>
+    </div>
+
+    <div id="chatSection" style="display:none;">
+        <div id="chatWindow"></div>
+        <input type="text" id="messageInput" placeholder="Type your message here">
+        <button id="sendButton">Send</button>
+    </div>
+
+    <!-- The Modal -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalCaseNumber"></h2>
+            <p><strong>Location:</strong> <span id="modalLocation"></span></p>
+            <p><strong>Persons of Interest:</strong></p>
+            <ul id="modalPersons"></ul>
+            <p><strong>Details:</strong> <span id="modalDetails"></span></p>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        let username = '';
+
+        // Function to fetch cases from the server
+        function fetchCases() {
+            fetch('/cases')
+                .then(response => response.json())
+                .then(data => renderCards(data))
+                .catch(error => console.error('Error fetching cases:', error));
+        }
+
+        // Function to render cards
+        function renderCards(cases) {
+            const cardsContainer = document.getElementById('cardsContainer');
+            cardsContainer.innerHTML = '';
+
+            cases.forEach((caseItem, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                const caseNumber = document.createElement('h2');
+                caseNumber.textContent = caseItem['Case Number'];
+                card.appendChild(caseNumber);
+
+                const detailsButton = document.createElement('button');
+                detailsButton.className = 'button';
+                detailsButton.textContent = 'Details';
+                detailsButton.onclick = () => showModal(caseItem);
+                card.appendChild(detailsButton);
+
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        // Function to show modal with case details
+        function showModal(caseItem) {
+            document.getElementById('modalCaseNumber').textContent = caseItem['Case Number'];
+            document.getElementById('modalLocation').textContent = caseItem['Location'];
+            const personsList = document.getElementById('modalPersons');
+            personsList.innerHTML = '';
+
+            caseItem['Persons of Interest'].forEach(person => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${person.Name}, ${person.Age} - ${person.Occupation}`;
+                personsList.appendChild(listItem);
+            });
+
+            document.getElementById('modalDetails').textContent = caseItem['Details'];
+            document.getElementById('myModal').style.display = 'block';
+        }
+
+        // Close modal when the user clicks the close button
+        document.querySelector('.close').onclick = function() {
+            document.getElementById('myModal').style.display = 'none';
+        }
+
+        // Close modal when the user clicks anywhere outside of the modal
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('myModal')) {
+                document.getElementById('myModal').style.display = 'none';
+            }
+        }
+
+        // Fetch and render cases on page load
+        fetchCases();
+
+        // Chat feature
+
+        const chatWindow = document.getElementById('chatWindow');
+
+        // Function to add a new message to the chat window
+        function addMessage(message, sender) {
+            const messageElement = document.createElement('p');
+            messageElement.textContent = `${sender}: ${message}`;
+            chatWindow.appendChild(messageElement);
+            chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to the bottom
+        }
+
+        // Load previous messages
+        socket.on('load messages', (messages) => {
+            chatWindow.innerHTML = ''; // Clear the chat window
+            messages.forEach(({ message, sender }) => addMessage(message, sender)); // Add each message to the chat window
+        });
+
+        // Listen for new messages from the server
+        socket.on('new message', ({ message, sender }) => {
+            addMessage(message, sender);
+        });
+
+        // Set username
+        document.getElementById('setUsernameButton').addEventListener('click', () => {
+            username = document.getElementById('usernameInput').value;
+            if (username.trim()) {
+                document.getElementById('usernameSection').style.display = 'none';
+                document.getElementById('chatSection').style.display = 'block';
+            }
+        });
+
+        // Send new message
+        document.getElementById('sendButton').addEventListener('click', () => {
+            const message = document.getElementById('messageInput').value;
+            if (message.trim()) {
+                socket.emit('new message', { message, sender: username }); // Send the message to the server with the username
+                document.getElementById('messageInput').value = ''; // Clear the input field
+            }
+        });
+    </script>
+</body>
+</html>

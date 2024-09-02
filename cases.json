@@ -1,0 +1,28 @@
+[
+    {
+        "Case Number": "2024-0001",
+        "Location": "New York, NY",
+        "Persons of Interest": [
+            { "Name": "John Doe", "Age": 35, "Occupation": "Software Engineer" },
+            { "Name": "Jane Smith", "Age": 28, "Occupation": "Data Analyst" }
+        ],
+        "Details": "The case involves unauthorized access to company servers. Both persons of interest were identified as having access to the compromised systems."
+    },
+    {
+        "Case Number": "2024-0002",
+        "Location": "Los Angeles, CA",
+        "Persons of Interest": [
+            { "Name": "Alice Johnson", "Age": 42, "Occupation": "Financial Advisor" }
+        ],
+        "Details": "The case involves suspicious financial transactions linked to offshore accounts. Alice Johnson was flagged due to her recent activities with high-value transactions."
+    },
+    {
+        "Case Number": "2024-0003",
+        "Location": "Chicago, IL",
+        "Persons of Interest": [
+            { "Name": "Robert Brown", "Age": 50, "Occupation": "Real Estate Agent" },
+            { "Name": "Emily Davis", "Age": 38, "Occupation": "Property Manager" }
+        ],
+        "Details": "The case involves an investigation into fraudulent property sales. The persons of interest are connected to several properties under investigation for suspicious activity."
+    }
+]
